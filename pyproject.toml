@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pytest-conversational"
+version = "0.1.0"
+description = "pytest plugin for multi-turn dialogue testing. Rule-based assertions, no LLM dependency."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+keywords = ["pytest", "testing", "chatbot", "voice", "conversational", "ivr", "dialogue"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Testing",
+    "Operating System :: OS Independent",
+]
+dependencies = []
+
+[[project.authors]]
+name = "Mikhail Golikov"
+email = "golikovichev@gmail.com"
+
+[project.urls]
+Homepage = "https://github.com/golikovichev/pytest-conversational"
+Repository = "https://github.com/golikovichev/pytest-conversational"
+Issues = "https://github.com/golikovichev/pytest-conversational/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[project.entry-points.pytest11]
+pytest_conversational = "pytest_conversational.plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pytest_conversational"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
