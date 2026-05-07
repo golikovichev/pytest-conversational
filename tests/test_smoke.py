@@ -1,12 +1,10 @@
-"""Smoke tests + first failing TDD test for Sess 3 work."""
-
-import pytest
+"""Smoke tests for the public API."""
 
 from pytest_conversational import Conversation, Turn, __version__
 
 
 def test_version_is_set():
-    assert __version__ == "0.1.0"
+    assert __version__ == "0.2.0"
 
 
 def test_empty_conversation_has_no_turns():
@@ -40,12 +38,3 @@ def test_fixture_provides_empty_conversation(pytester):
     )
     result = pytester.runpytest()
     result.assert_outcomes(passed=1)
-
-
-@pytest.mark.xfail(reason="Bot reply mechanism lands in Sess 3", strict=True)
-def test_user_says_triggers_bot_reply():
-    """Sess 3 will wire a bot adapter. Until then this fails by design."""
-    convo = Conversation()
-    convo.add_user("ping")
-    assert convo.last is not None
-    assert convo.last.bot == "pong"
