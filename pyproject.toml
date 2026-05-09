@@ -34,8 +34,12 @@ Repository = "https://github.com/golikovichev/pytest-conversational"
 Issues = "https://github.com/golikovichev/pytest-conversational/issues"
 
 [project.optional-dependencies]
+http = [
+    "httpx>=0.25",
+]
 dev = [
     "pytest>=7.0",
+    "httpx>=0.25",
 ]
 
 [project.entry-points.pytest11]

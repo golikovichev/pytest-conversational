@@ -57,6 +57,28 @@ def test_two_slot_flow(conversation_factory):
     assert convo.last.bot == "hello Mikhail from Hove"
 ```
 
+## HTTP webhook adapter
+
+If your bot lives behind an HTTP endpoint, use the bundled adapter instead of writing one by hand:
+
+```bash
+pip install pytest-conversational[http]
+```
+
+```python
+from pytest_conversational import Conversation
+from pytest_conversational.adapters import http_webhook
+
+
+def test_remote_bot():
+    bot = http_webhook("https://my-bot.example.com/webhook", timeout=3.0)
+    convo = Conversation(bot=bot)
+    convo.say("hello")
+    assert "hi" in convo.last.bot.lower()
+```
+
+The default contract: POST `{"user": text, "history": [[u, b], ...]}`, expect `200 OK` with JSON `{"reply": "..."}`. If your endpoint speaks a different shape, pass `request_builder` and `response_parser` callbacks.
+
 ## Fixtures
 
 | Fixture | Purpose |
