@@ -79,6 +79,28 @@ def test_remote_bot():
 
 The default contract: POST `{"user": text, "history": [[u, b], ...]}`, expect `200 OK` with JSON `{"reply": "..."}`. If your endpoint speaks a different shape, pass `request_builder` and `response_parser` callbacks.
 
+## Matchers
+
+`expect` is a small module of assertion helpers tuned for bot replies. Each matcher raises `AssertionError` with the actual reply embedded in the message, so pytest output shows what the bot said versus what the test wanted.
+
+```python
+from pytest_conversational import expect
+
+def test_replies(conversation_factory):
+    convo = conversation_factory(bot=my_bot)
+    convo.say("hi")
+
+    expect.contains(convo.last.bot, "hello")
+    expect.regex(convo.last.bot, r"^hello\s+\w+")
+    expect.one_of(convo.last.bot, ["hello there", "hi there", "hey"])
+```
+
+- `contains(actual, substring, *, case_sensitive=False)`: substring search. Case-insensitive by default.
+- `regex(actual, pattern, *, flags=0)`: `re.search` semantics. Returns the match object so callers can inspect captured groups.
+- `one_of(actual, options, *, case_sensitive=False)`: exact equality against a list of alternatives. Use for deterministic varying replies like `["yes", "yeah", "yep"]`.
+
+Use these when bare `assert "hello" in convo.last.bot` would give noisy failure messages across many tests. For one-off checks, plain `assert` is still fine.
+
 ## Fixtures
 
 | Fixture | Purpose |
@@ -94,10 +116,10 @@ The default contract: POST `{"user": text, "history": [[u, b], ...]}`, expect `2
 - `Conversation.last`, `.turns`, `.history`, `.transcript()`.
 - `Turn(user, bot, metadata)`.
 - `BotAdapter = Callable[[str, Conversation], str]`.
+- `expect.contains`, `expect.regex`, `expect.one_of`.
 
 ## Roadmap
 
-- v0.3: matchers (`expect.contains`, `expect.regex`, `expect.one_of`).
 - v0.4: scenario DSL loaded from YAML or plain text fixtures.
 - v0.5: async adapter support for coroutine-based bots.
 - v1.0: 12.06.2026 release.
