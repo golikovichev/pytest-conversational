@@ -14,6 +14,7 @@ the message, so pytest output shows what the bot said versus what was
 expected. Use these instead of bare ``assert`` when you want clear
 diff-style failure output across many tests.
 """
+
 from __future__ import annotations
 
 import re
@@ -30,9 +31,7 @@ def contains(actual: str, substring: str, *, case_sensitive: bool = False) -> No
         AssertionError: if ``actual`` is None or does not contain ``substring``.
     """
     if actual is None:
-        raise AssertionError(
-            f"expected substring {substring!r} in reply, got None"
-        )
+        raise AssertionError(f"expected substring {substring!r} in reply, got None")
     if not isinstance(substring, str):
         raise TypeError(f"substring must be str, got {type(substring).__name__}")
     haystack = actual if case_sensitive else actual.lower()
@@ -53,42 +52,61 @@ def regex(actual: str, pattern: str, *, flags: int = 0) -> re.Match[str]:
         re.error: if ``pattern`` is not a valid regex.
     """
     if actual is None:
-        raise AssertionError(
-            f"expected regex {pattern!r} to match, got None"
-        )
+        raise AssertionError(f"expected regex {pattern!r} to match, got None")
     match = re.search(pattern, actual, flags=flags)
     if match is None:
-        raise AssertionError(
-            f"expected regex {pattern!r} to match, got: {actual!r}"
-        )
+        raise AssertionError(f"expected regex {pattern!r} to match, got: {actual!r}")
     return match
 
 
-def one_of(actual: str, options: Iterable[str], *, case_sensitive: bool = False) -> None:
-    """Assert that ``actual`` is exactly equal to one of ``options``.
+def one_of(
+    actual: str,
+    options: Iterable[str],
+    *,
+    case_sensitive: bool = False,
+    mode: str = "exact",
+) -> None:
+    """Assert that ``actual`` matches one of ``options``.
 
     Use this when the bot replies vary across deterministic alternatives,
     for example ``["yes", "yeah", "yep"]`` for affirmative answers.
-    Compares full strings, not substrings. For substring search across
-    several alternatives, call ``contains`` in a loop or use ``regex``.
 
     Case-insensitive by default. Pass ``case_sensitive=True`` for exact
     case matching.
 
+    Modes:
+        - "exact" (default): full-string exact match.
+        - "substring": substring match.
+
     Raises:
         AssertionError: if ``actual`` is None or matches no option.
-        ValueError: if ``options`` is empty.
+        ValueError: if ``options`` is empty or ``mode`` is invalid.
     """
     opts = list(options)
     if not opts:
         raise ValueError("one_of requires at least one option")
     if actual is None:
-        raise AssertionError(
-            f"expected reply to be one of {opts!r}, got None"
+        raise AssertionError(f"expected reply to match one of {opts!r}, got None")
+
+    if not case_sensitive:
+        actual_cmp = actual.lower()
+        opts_cmp = [o.lower() for o in opts]
+    else:
+        actual_cmp = actual
+        opts_cmp = opts
+
+    if mode == "exact":
+        matched = actual_cmp in opts_cmp
+
+    elif mode == "substring":
+        matched = any(option in actual_cmp for option in opts_cmp)
+
+    else:
+        raise ValueError(
+            f"invalid mode for one_of: {mode!r}. Supported modes are: 'exact', 'substring'"
         )
-    target = actual if case_sensitive else actual.lower()
-    candidates = opts if case_sensitive else [o.lower() for o in opts]
-    if target not in candidates:
+
+    if not matched:
         raise AssertionError(
-            f"expected reply to be one of {opts!r}, got: {actual!r}"
+            f"expected reply to match one of {opts!r} using mode={mode!r}, case_sensitive={case_sensitive}, got: {actual!r}"
         )
