@@ -80,7 +80,6 @@ def test_remote_bot():
 The default contract: POST `{"user": text, "history": [[u, b], ...]}`, expect `200 OK` with JSON `{"reply": "..."}`. If your endpoint speaks a different shape, pass `request_builder` and `response_parser` callbacks.
 
 ## Matchers
-
 `expect` is a small module of assertion helpers tuned for bot replies. Each matcher raises `AssertionError` with the actual reply embedded in the message, so pytest output shows what the bot said versus what the test wanted.
 
 ```python
@@ -93,13 +92,13 @@ def test_replies(conversation_factory):
     expect.contains(convo.last.bot, "hello")
     expect.regex(convo.last.bot, r"^hello\s+\w+")
     expect.one_of(convo.last.bot, ["hello there", "hi there", "hey"])
+    expect.one_of(convo.last.bot, ["hello", "hi"], mode="substring")
 ```
+`contains(actual, substring, *, case_sensitive=False)`: substring search. Case-insensitive by default.
 
-- `contains(actual, substring, *, case_sensitive=False)`: substring search. Case-insensitive by default.
-- `regex(actual, pattern, *, flags=0)`: `re.search` semantics. Returns the match object so callers can inspect captured groups.
-- `one_of(actual, options, *, case_sensitive=False)`: exact equality against a list of alternatives. Use for deterministic varying replies like `["yes", "yeah", "yep"]`.
+`regex(actual, pattern, *, flags=0)`: re.search semantics. Returns the match object so callers can inspect captured groups.
 
-Use these when bare `assert "hello" in convo.last.bot` would give noisy failure messages across many tests. For one-off checks, plain `assert` is still fine.
+`one_of(actual, options, *, mode="exact", case_sensitive= False)`: supports exact and substring matching against a list of alternatives. Supported modes: "exact" and "substring".
 
 ## Fixtures
 
