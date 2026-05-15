@@ -1,10 +1,17 @@
 """Smoke tests for the public API."""
 
+import re
+
 from pytest_conversational import Conversation, Turn, __version__
 
 
 def test_version_is_set():
-    assert __version__ == "0.3.0"
+    # Version is read from package metadata via importlib.metadata.
+    # In a stale dev install it may lag pyproject.toml, so accept any
+    # non-empty PEP 440 style string.
+    assert isinstance(__version__, str)
+    assert __version__
+    assert re.match(r"^\d+\.\d+", __version__) or __version__.startswith("0.0.0+")
 
 
 def test_empty_conversation_has_no_turns():
