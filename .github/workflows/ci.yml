@@ -29,4 +29,7 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Run tests
-        run: pytest -v
+        run: pytest tests/ -v
+
+      - name: Examples smoke
+        run: pytest examples/ -v
