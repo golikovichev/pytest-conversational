@@ -1,3 +1,6 @@
+"""
+Example tests for an order tracking bot, demonstrating how to test regular expression extraction.
+"""
 import re
 from pytest_conversational import expect
 

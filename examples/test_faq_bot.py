@@ -1,3 +1,6 @@
+"""
+Example tests for a simple FAQ bot, demonstrating basic text matching and assertions.
+"""
 from pytest_conversational import expect
 
 def faq_bot(text, convo):
