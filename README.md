@@ -79,6 +79,10 @@ def test_remote_bot():
 
 The default contract: POST `{"user": text, "history": [[u, b], ...]}`, expect `200 OK` with JSON `{"reply": "..."}`. If your endpoint speaks a different shape, pass `request_builder` and `response_parser` callbacks.
 
+### Security note
+
+The webhook URL is passed through to `httpx` as-is. If your test feeds a URL it pulled from user input, fixture data, or another untrusted source, the adapter will happily hit it. That includes internal addresses like `127.0.0.1`, `169.254.169.254` (cloud metadata service), or `10.x.x.x` inside a VPC. Pin the URL to a hard-coded value in the test, or gate it through your own allowlist before passing it in.
+
 ## Matchers
 
 `expect` is a small module of assertion helpers tuned for bot replies. Each matcher raises `AssertionError` with the actual reply embedded in the message, so pytest output shows what the bot said versus what the test wanted.
