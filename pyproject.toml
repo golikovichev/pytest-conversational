@@ -49,5 +49,5 @@ pytest_conversational = "pytest_conversational.plugin"
 packages = ["src/pytest_conversational"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "examples"]
 python_files = "test_*.py"
