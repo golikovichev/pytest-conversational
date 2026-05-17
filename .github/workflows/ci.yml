@@ -30,3 +30,6 @@ jobs:
 
       - name: Run tests
         run: pytest -v
+
+      - name: examples-smoke
+        run: pytest examples/ -v
