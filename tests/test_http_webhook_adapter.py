@@ -144,6 +144,9 @@ def test_adapter_works_without_explicit_client(monkeypatch):
 
     class FakeResponse:
         status_code = 200
+        # Default parser checks len(response.content) against max_reply_bytes
+        # before parsing JSON; the fake needs a bytes-like content attribute.
+        content = b'{"reply": "ack"}'
 
         def raise_for_status(self):
             pass
@@ -176,3 +179,62 @@ def test_adapter_works_without_explicit_client(monkeypatch):
     assert calls["url"] == "https://bot.test/x"
     assert calls["timeout"] == 2.0
     assert convo.last.bot == "ack"
+
+
+# M4: reply size guard (added 2026-05-20)
+
+
+def test_reply_size_guard_rejects_oversized_response_body():
+    """Default parser refuses a response whose raw bytes exceed max_reply_bytes,
+    even if the JSON would have parsed successfully."""
+    huge_padding = "x" * 2048  # makes the JSON body > 1024 bytes
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"reply": "ok", "padding": huge_padding})
+
+    with _client_with_handler(handler) as client:
+        bot = http_webhook(
+            "https://bot.test/webhook", client=client, max_reply_bytes=1024
+        )
+        convo = Conversation(bot=bot)
+        with pytest.raises(ValueError, match=r"response body exceeds max_reply_bytes"):
+            convo.say("ping")
+
+
+def test_reply_size_guard_allows_payload_under_limit():
+    """Normal-sized response passes through cleanly with the guard armed."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"reply": "tiny"})
+
+    with _client_with_handler(handler) as client:
+        bot = http_webhook(
+            "https://bot.test/webhook", client=client, max_reply_bytes=1024
+        )
+        convo = Conversation(bot=bot)
+        turn = convo.say("ping")
+    assert turn.bot == "tiny"
+
+
+def test_custom_response_parser_bypasses_size_guard():
+    """When the caller supplies their own response_parser, the default
+    size guard is not in play, the custom parser owns its limits."""
+    huge_reply = "z" * 10000
+
+    def custom_parser(response: httpx.Response) -> str:
+        # Custom parser deliberately ignores size, returns whatever came back.
+        return response.json()["reply"]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"reply": huge_reply})
+
+    with _client_with_handler(handler) as client:
+        bot = http_webhook(
+            "https://bot.test/webhook",
+            client=client,
+            response_parser=custom_parser,
+            max_reply_bytes=100,  # would have blocked default parser, but ignored here
+        )
+        convo = Conversation(bot=bot)
+        turn = convo.say("ping")
+    assert turn.bot == huge_reply
