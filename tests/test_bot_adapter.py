@@ -106,3 +106,54 @@ def test_factory_fixture_without_bot_still_works(pytester):
     )
     result = pytester.runpytest()
     result.assert_outcomes(passed=1)
+
+
+# M5: adapter exception propagates raw, partial turn stays visible (added 2026-05-20)
+
+
+def test_adapter_exception_propagates_unchanged():
+    """When the adapter raises, say() lets the original exception bubble.
+    Callers can pattern-match on the concrete exception type."""
+
+    def angry_bot(text: str, convo: Conversation) -> str:
+        raise ValueError("upstream broke")
+
+    convo = Conversation(bot=angry_bot)
+    with pytest.raises(ValueError, match="upstream broke"):
+        convo.say("hello")
+
+
+def test_partial_turn_stays_in_history_on_adapter_failure():
+    """A failed turn leaves user text in history with empty bot reply,
+    so callers can inspect what was attempted before the failure."""
+
+    def angry_bot(text: str, convo: Conversation) -> str:
+        raise RuntimeError("nope")
+
+    convo = Conversation(bot=angry_bot)
+    with pytest.raises(RuntimeError):
+        convo.say("attempt")
+    assert len(convo.turns) == 1
+    assert convo.turns[0].user == "attempt"
+    assert convo.turns[0].bot == ""
+
+
+def test_partial_turn_after_two_successful_turns():
+    """Multi-turn conversation keeps successful turns intact and shows
+    the failed third turn as user-only, no bot reply."""
+
+    def bot(text: str, convo: Conversation) -> str:
+        if text == "BOOM":
+            raise IOError("network down")
+        return f"ok {text}"
+
+    convo = Conversation(bot=bot)
+    convo.say("first")
+    convo.say("second")
+    with pytest.raises(IOError, match="network down"):
+        convo.say("BOOM")
+    assert len(convo.turns) == 3
+    assert convo.turns[0].bot == "ok first"
+    assert convo.turns[1].bot == "ok second"
+    assert convo.turns[2].user == "BOOM"
+    assert convo.turns[2].bot == ""

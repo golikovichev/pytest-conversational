@@ -42,9 +42,21 @@ class Conversation:
     def say(self, text: str) -> Turn:
         """Send user text through the bot adapter and record the reply.
 
-        Raises RuntimeError if no adapter was attached. The same Turn
-        object is returned so callers can read ``turn.bot`` or stash
-        custom values into ``turn.metadata``.
+        The Turn is appended to ``self.turns`` BEFORE the adapter call so
+        the adapter sees the in-progress turn through ``convo.history``
+        (the default request builder relies on this contract). The reply
+        is written back into the same Turn object on success.
+
+        Partial-transcript semantics: if the adapter raises, the partial
+        Turn stays in ``self.turns`` with ``turn.bot == ""`` and the
+        original exception propagates to the caller unchanged. Callers
+        can inspect ``convo.turns[-1]`` to see what was attempted before
+        the failure, while still pattern-matching on the original
+        exception type (``httpx.HTTPStatusError``, ``ValueError``, etc.).
+
+        Raises:
+            RuntimeError: if no adapter is attached.
+            Exception: whatever the adapter itself raises, propagated as-is.
         """
         if self.bot is None:
             raise RuntimeError(

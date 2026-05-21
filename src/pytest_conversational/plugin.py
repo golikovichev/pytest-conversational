@@ -7,6 +7,23 @@ import pytest
 from pytest_conversational.conversation import BotAdapter, Conversation
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    """Register the ``conversational`` marker so ``--strict-markers`` is happy.
+
+    Tests that exercise multi-turn dialogue can opt in with::
+
+        @pytest.mark.conversational
+        def test_greeting(conversation_factory):
+            ...
+
+    Collection filtering then works as expected: ``pytest -m conversational``.
+    """
+    config.addinivalue_line(
+        "markers",
+        "conversational: tag a test as a multi-turn conversational bot test",
+    )
+
+
 @pytest.fixture
 def conversation() -> Conversation:
     """Fresh empty Conversation, no adapter attached.

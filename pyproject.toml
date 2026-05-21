@@ -49,5 +49,9 @@ pytest_conversational = "pytest_conversational.plugin"
 packages = ["src/pytest_conversational"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "examples"]
 python_files = "test_*.py"
+addopts = "--strict-markers"
+markers = [
+    "conversational: tag a test as a multi-turn conversational bot test",
+]
