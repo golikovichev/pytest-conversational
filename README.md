@@ -1,5 +1,9 @@
 # pytest-conversational
 
+[![PyPI](https://img.shields.io/pypi/v/pytest-conversational.svg)](https://pypi.org/project/pytest-conversational/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pytest-conversational.svg)](https://pypi.org/project/pytest-conversational/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A pytest plugin for testing chat bots, voice assistants, IVR menus. Rule-based assertions, no LLM dependency.
 
 Status: alpha. v1.0.0 target June 2026.
