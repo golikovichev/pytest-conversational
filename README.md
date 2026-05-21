@@ -105,7 +105,7 @@ def test_replies(conversation_factory):
 
 - `contains(actual, substring, *, case_sensitive=False)`: substring search. Case-insensitive by default.
 - `regex(actual, pattern, *, flags=0)`: `re.search` semantics. Returns the match object so callers can inspect captured groups.
-- `one_of(actual, options, *, case_sensitive=False)`: exact equality against a list of alternatives. Use for deterministic varying replies like `["yes", "yeah", "yep"]`.
+- `one_of(actual, options, *, case_sensitive=False, mode="exact")`: matches `actual` against a list of alternative `options`. Supports `mode="exact"` (full-string match, default) and `mode="substring"` (checks if any option is a substring of `actual`).
 
 Use these when bare `assert "hello" in convo.last.bot` would give noisy failure messages across many tests. For one-off checks, plain `assert` is still fine.
 

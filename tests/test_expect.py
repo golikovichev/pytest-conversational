@@ -1,4 +1,5 @@
 """Tests for the expect matchers module."""
+
 from __future__ import annotations
 
 import re
@@ -83,11 +84,11 @@ class TestOneOf:
         expect.one_of("yep", ["yes", "yeah", "yep"])
 
     def test_no_match_raises(self) -> None:
-        with pytest.raises(AssertionError, match="expected reply to be one of"):
+        with pytest.raises(AssertionError, match="expected reply to match one of"):
             expect.one_of("maybe", ["yes", "no"])
 
-    def test_substring_match_does_not_count(self) -> None:
-        # one_of requires full equality. "yeshere" contains "yes" but is not "yes".
+    def test_substring_match_does_not_count_in_exact_mode(self) -> None:
+        # one_of requires full equality by default (exact mode).
         with pytest.raises(AssertionError):
             expect.one_of("yeshere", ["yes", "no"])
 
@@ -98,6 +99,23 @@ class TestOneOf:
         expect.one_of("yes", ["yes", "no"], case_sensitive=True)
         with pytest.raises(AssertionError):
             expect.one_of("YES", ["yes", "no"], case_sensitive=True)
+
+    def test_substring_mode_matches_substring(self) -> None:
+        expect.one_of("hello there", ["hello", "bye"], mode="substring")
+        expect.one_of("hello there", ["hi", "there"], mode="substring")
+
+    def test_substring_mode_case_sensitive(self) -> None:
+        with pytest.raises(AssertionError):
+            expect.one_of(
+                "HELLO there", ["hello", "bye"], mode="substring", case_sensitive=True
+            )
+
+    def test_substring_mode_case_insensitive_by_default(self) -> None:
+        expect.one_of("HELLO there", ["hello", "bye"], mode="substring")
+
+    def test_invalid_mode_raises_valueerror(self) -> None:
+        with pytest.raises(ValueError, match="invalid mode for one_of"):
+            expect.one_of("yes", ["yes"], mode="regex")
 
     def test_none_actual_raises(self) -> None:
         with pytest.raises(AssertionError, match="got None"):
@@ -115,6 +133,8 @@ class TestOneOf:
             assert "nope" in msg
             assert "yes" in msg
             assert "yeah" in msg
+            assert "mode='exact'" in msg
+            assert "case_sensitive=False" in msg
         else:
             pytest.fail("expected AssertionError")
 
