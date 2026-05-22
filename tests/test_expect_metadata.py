@@ -87,6 +87,19 @@ def test_has_slot_fails_when_no_slots_dict():
         expect.has_slot(turn, "destination")
 
 
+def test_has_slot_fails_when_slots_is_not_a_dict():
+    """If the adapter recorded slots as a string or list by mistake, fail loudly."""
+    turn = Turn(user="hi", bot="hello", metadata={"slots": "destination=Brighton"})
+    with pytest.raises(AssertionError, match=r"no 'slots' dict"):
+        expect.has_slot(turn, "destination")
+
+
+def test_has_slot_fails_on_none_turn():
+    """Calling the matcher with a None turn must raise instead of crashing on attribute access."""
+    with pytest.raises(AssertionError, match=r"None turn"):
+        expect.has_slot(None, "destination")
+
+
 def test_has_slot_accepts_none_value_explicit():
     """If adapter records slot=None explicitly, has_slot(value=None) should pass."""
     turn = Turn(user="cancel", bot="ok", metadata={"slots": {"destination": None}})
@@ -127,6 +140,15 @@ def test_has_state_fails_on_none_conversation():
         expect.has_state(None, "phase")
 
 
+def test_has_state_fails_when_state_is_not_a_dict():
+    """A custom convo-like object that exposes ``state`` as the wrong type must fail loudly."""
+    from types import SimpleNamespace
+
+    fake_convo = SimpleNamespace(state="phase=greeting")
+    with pytest.raises(AssertionError, match=r"no 'state' dict"):
+        expect.has_state(fake_convo, "phase")
+
+
 # ---------------------------------------------------------------------------
 # responds_within
 # ---------------------------------------------------------------------------
@@ -152,6 +174,12 @@ def test_responds_within_fails_no_latency_key():
     turn = Turn(user="hi", bot="hello", metadata={})
     with pytest.raises(AssertionError, match=r"no 'latency_ms' key"):
         expect.responds_within(turn, 1.0)
+
+
+def test_responds_within_fails_on_none_turn():
+    """Calling the matcher with a None turn must raise instead of crashing on attribute access."""
+    with pytest.raises(AssertionError, match=r"None turn"):
+        expect.responds_within(None, 1.0)
 
 
 def test_responds_within_fails_non_numeric_latency():

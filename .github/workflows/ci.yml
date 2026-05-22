@@ -28,8 +28,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Run tests
-        run: pytest tests/ -v
+      - name: Run tests with coverage
+        run: |
+          coverage run --source=src/pytest_conversational -m pytest tests/ -v
+          coverage xml
+          coverage report
 
       - name: Examples smoke
         run: pytest examples/ -v
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: false
