@@ -91,6 +91,7 @@ bot = http_webhook(
     request_builder=None,
     response_parser=None,
     max_reply_bytes=1_048_576,
+    allowed_hosts=None,
 )
 ```
 
@@ -104,10 +105,24 @@ bot = http_webhook(
 - `request_builder(text, convo) -> dict`: build a custom JSON payload. Default builder packs `user` + `history`.
 - `response_parser(response) -> str`: extract the reply string from `httpx.Response`. Default reads `response.json()["reply"]`.
 - `max_reply_bytes`: hard cap before JSON parse. Larger responses raise before allocation. Default 1 MiB.
+- `allowed_hosts`: optional iterable of permitted hostnames. When set, the URL host must match one entry exactly (case-insensitive) or the adapter constructor raises `ValueError` before any HTTP traffic.
 
-### Security
+### Security: webhook reply is data, not instructions
 
-The webhook URL is passed to `httpx` unchanged. If a test reads the URL from fixture data, an env file, or any other untrusted source, the adapter will happily hit it, including `127.0.0.1`, `169.254.169.254` (cloud metadata service), or VPC-internal addresses. Pin the URL to a hard-coded value in the test, or run it through an allowlist before passing it in.
+This adapter is a test harness, not an agent driver. The reply string is captured as test output and asserted against by user-written matchers (`expect.contains`, `assert convo.last.bot == ...`). Nothing in the plugin interprets the reply as an instruction. That said, two threats are worth pinning down explicitly:
+
+**Host control.** The URL is passed to `httpx` unchanged. If a test reads the URL from fixture data, an env file, or any other source the developer does not control end-to-end, the adapter will happily hit it, including `127.0.0.1`, `169.254.169.254` (cloud metadata service), or VPC-internal addresses. Pin the host explicitly:
+
+```python
+bot = http_webhook(
+    os.environ["BOT_URL"],
+    allowed_hosts=["staging-bot.example.com"],
+)
+```
+
+Adapter construction raises `ValueError` immediately if the URL host is not in the list. Case-insensitive match on the hostname only; ports and paths are not part of the check.
+
+**Reply content trust.** The matchers (`expect.contains`, `expect.regex`, etc.) treat the reply as a string for assertions. If your test logs or persists replies elsewhere (for example to a CI test report consumed by a downstream tool), you may want to sanitise. The bundled matchers themselves do not eval, exec, render Markdown, or otherwise interpret the reply.
 
 ### Optional install
 

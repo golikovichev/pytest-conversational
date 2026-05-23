@@ -14,7 +14,8 @@ the adapter.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Iterable, Optional
+from urllib.parse import urlparse
 
 try:
     import httpx
@@ -65,6 +66,26 @@ def _default_parse(
     return reply
 
 
+def _check_host_allowed(url: str, allowed_hosts: Optional[Iterable[str]]) -> None:
+    """Raise ``ValueError`` if the URL host is not in ``allowed_hosts``.
+
+    Pass ``allowed_hosts=None`` to opt out (the default). When set, the
+    check fires at adapter construction time so misconfigured tests fail
+    early rather than reaching out to an unexpected endpoint at runtime.
+    """
+    if allowed_hosts is None:
+        return
+    host = urlparse(url).hostname
+    allowed_set = {h.lower() for h in allowed_hosts}
+    if host is None or host.lower() not in allowed_set:
+        raise ValueError(
+            f"webhook URL host {host!r} is not in allowed_hosts "
+            f"{sorted(allowed_set)!r}. Pin the host explicitly to prevent "
+            f"accidental requests to internal addresses (127.0.0.1, "
+            f"169.254.169.254, VPC ranges) or untrusted endpoints."
+        )
+
+
 def http_webhook(
     url: str,
     *,
@@ -74,6 +95,7 @@ def http_webhook(
     response_parser: Optional[ResponseParser] = None,
     client: Optional[httpx.Client] = None,
     max_reply_bytes: int = DEFAULT_MAX_REPLY_BYTES,
+    allowed_hosts: Optional[Iterable[str]] = None,
 ) -> BotAdapter:
     """Build a BotAdapter that sends each user turn to an HTTP endpoint.
 
@@ -93,10 +115,18 @@ def http_webhook(
         max_reply_bytes: Cap on response and reply size, applied by the
             default parser. Defaults to 1 MiB. Ignored when ``response_parser``
             is supplied (the custom parser is responsible for its own limits).
+        allowed_hosts: Optional allowlist of hostnames. When set, the URL
+            host must match one entry exactly (case-insensitive) or
+            adapter construction raises ``ValueError``. Use to prevent
+            tests from reading URLs out of fixtures or env files and
+            accidentally hitting internal addresses such as
+            ``127.0.0.1``, ``169.254.169.254`` (cloud metadata), or
+            VPC-internal ranges.
 
     Returns:
         A BotAdapter callable suitable for ``Conversation(bot=...)``.
     """
+    _check_host_allowed(url, allowed_hosts)
     build = request_builder or _default_request
     if response_parser is None:
         # Bind max_reply_bytes via closure so the default parser keeps a

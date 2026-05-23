@@ -89,7 +89,15 @@ def test_remote_bot():
     assert "hi" in convo.last.bot.lower()
 ```
 
-Default contract: `POST` with JSON body `{"user": text, "history": [[u, b], ...]}`, response `{"reply": "..."}`. Pass `request_builder` and `response_parser` for other shapes. Full security guidance and override patterns are in `REFERENCE.md`.
+Default contract: `POST` with JSON body `{"user": text, "history": [[u, b], ...]}`, response `{"reply": "..."}`. Pass `request_builder` and `response_parser` for other shapes.
+
+For untrusted URL sources (env vars, fixture files), pin the host explicitly:
+
+```python
+bot = http_webhook(os.environ["BOT_URL"], allowed_hosts=["staging-bot.example.com"])
+```
+
+`allowed_hosts` raises `ValueError` at adapter construction if the URL host is not on the list, blocking accidental requests to `127.0.0.1`, cloud metadata, or VPC-internal addresses. The reply is captured as test data and asserted against by user-written matchers; the plugin never interprets it as an instruction. Full security note + override patterns in `REFERENCE.md`.
 
 ## Matchers
 

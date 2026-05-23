@@ -238,3 +238,77 @@ def test_custom_response_parser_bypasses_size_guard():
         convo = Conversation(bot=bot)
         turn = convo.say("ping")
     assert turn.bot == huge_reply
+
+
+# ---------------------------------------------------------------------------
+# allowed_hosts host-allowlist guard
+# ---------------------------------------------------------------------------
+
+
+def test_allowed_hosts_accepts_matching_host():
+    """When the URL host is on the allowlist, adapter construction succeeds."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"reply": "ok"})
+
+    with _client_with_handler(handler) as client:
+        bot = http_webhook(
+            "https://bot.test/webhook",
+            client=client,
+            allowed_hosts=["bot.test"],
+        )
+        convo = Conversation(bot=bot)
+        turn = convo.say("ping")
+    assert turn.bot == "ok"
+
+
+def test_allowed_hosts_rejects_off_list_host():
+    """Construction raises before any HTTP traffic when host is off the list."""
+    with pytest.raises(ValueError, match=r"is not in allowed_hosts"):
+        http_webhook(
+            "https://attacker.example/webhook",
+            allowed_hosts=["bot.test"],
+        )
+
+
+def test_allowed_hosts_is_case_insensitive():
+    """Host comparison is case-insensitive on both URL and allowlist sides."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"reply": "ok"})
+
+    with _client_with_handler(handler) as client:
+        bot = http_webhook(
+            "https://BOT.TEST/webhook",
+            client=client,
+            allowed_hosts=["bot.test"],
+        )
+        convo = Conversation(bot=bot)
+        turn = convo.say("ping")
+    assert turn.bot == "ok"
+
+
+def test_allowed_hosts_blocks_loopback_when_external_only():
+    """Realistic threat: a test reads URL from env, accidentally points at
+    127.0.0.1 or the cloud-metadata IP. allowed_hosts blocks before request.
+    """
+    for url in (
+        "http://127.0.0.1:8080/webhook",
+        "http://169.254.169.254/latest/meta-data/",
+        "http://10.0.0.5/bot",
+    ):
+        with pytest.raises(ValueError, match=r"is not in allowed_hosts"):
+            http_webhook(url, allowed_hosts=["bot.test"])
+
+
+def test_allowed_hosts_none_is_opt_out_default():
+    """Default behaviour: no allowlist, no host check. Backwards compatible."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"reply": "ok"})
+
+    with _client_with_handler(handler) as client:
+        bot = http_webhook("https://anything.example/webhook", client=client)
+        convo = Conversation(bot=bot)
+        turn = convo.say("ping")
+    assert turn.bot == "ok"
