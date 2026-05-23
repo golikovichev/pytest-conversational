@@ -5,10 +5,42 @@ All notable changes to pytest-conversational are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0] - 2026-05-23
+
+### Added
+
+- `expect` matchers: `slot`, `state`, `intent`, and `latency` for testing
+  structured conversation outputs (state machine slots, intent labels, response
+  timing budgets).
+- HTTP webhook adapter `allowed_hosts` parameter: pin tests to a host
+  allowlist with case-insensitive comparison, trailing-dot normalisation, and
+  scheme check. URLs outside the allowlist raise `ValueError` before the
+  request goes out.
+- Reply size guard in HTTP webhook adapter (`max_reply_bytes`, default 1 MiB):
+  bound the response body size before parsing to fail fast on runaway
+  adapters.
+- Substring matching modes for `one_of`: contributor PR #5 by
+  SHIVANSH-ux-ys.
+- README badges for PyPI version, Python versions, license, and Codecov
+  coverage.
+- `SKILL.md` and `REFERENCE.md` for Tessl Registry submission (review score
+  100%).
+- Plugin smoke tests and `conversational` pytest marker registration.
 
 ### Changed
-- Version string in `__init__.py` is now read from package metadata via `importlib.metadata.version`, removing the second source of truth.
+
+- Version string in `__init__.py` is now read from package metadata via
+  `importlib.metadata.version`, removing the second source of truth.
+- `say` documents partial-turn semantics: the Turn is appended to history
+  before the adapter call, so adapter exceptions still leave a traceable
+  transcript.
+- Documentation split: `SKILL.md` contains the quick-start surface,
+  `REFERENCE.md` holds the public API, matchers reference, and CI templates.
+
+### Fixed
+
+- HTTP webhook adapter rejects URLs with a hostname not in `allowed_hosts`
+  and surfaces a clear `ValueError` instead of issuing the request.
 
 ## [0.3.0] - 2026-05-13
 
@@ -27,7 +59,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release. `pyproject.toml`, CI matrix on Python 3.10 / 3.11 / 3.12, smoke tests.
 
-[Unreleased]: https://github.com/golikovichev/pytest-conversational/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/golikovichev/pytest-conversational/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/golikovichev/pytest-conversational/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/golikovichev/pytest-conversational/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/golikovichev/pytest-conversational/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/golikovichev/pytest-conversational/releases/tag/v0.1.0
