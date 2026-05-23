@@ -120,7 +120,9 @@ bot = http_webhook(
 )
 ```
 
-Adapter construction raises `ValueError` immediately if the URL host is not in the list. Case-insensitive match on the hostname only; ports and paths are not part of the check.
+Adapter construction raises `ValueError` immediately if the URL host is not in the list. Case-insensitive match on the hostname only; ports, paths, and embedded credentials (`user:pass@host` form) are not part of the check. Trailing FQDN-root dots (`bot.test.`) are treated as equivalent to the bare form (`bot.test`). The same allowlist also catches IPv6 loopback (`http://[::1]/...`) and link-local addresses (`fe80::/10`), since `urlparse` returns the bare IPv6 string for the hostname.
+
+The URL must include an explicit scheme (`http://` or `https://`). A scheme-less URL such as `bot.test/webhook` raises a specific `has no scheme` error rather than the generic host-mismatch message, so a typo in an env var fails clearly.
 
 **Reply content trust.** The matchers (`expect.contains`, `expect.regex`, etc.) treat the reply as a string for assertions. If your test logs or persists replies elsewhere (for example to a CI test report consumed by a downstream tool), you may want to sanitise. The bundled matchers themselves do not eval, exec, render Markdown, or otherwise interpret the reply.
 

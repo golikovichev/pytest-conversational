@@ -312,3 +312,48 @@ def test_allowed_hosts_none_is_opt_out_default():
         convo = Conversation(bot=bot)
         turn = convo.say("ping")
     assert turn.bot == "ok"
+
+
+def test_allowed_hosts_rejects_schemeless_url_with_clear_message():
+    """A scheme-less URL when allowed_hosts is set raises a specific error
+    instead of the generic 'host None is not in allowed_hosts' message.
+    """
+    with pytest.raises(ValueError, match=r"has no scheme"):
+        http_webhook("bot.test/webhook", allowed_hosts=["bot.test"])
+
+
+def test_allowed_hosts_treats_trailing_dot_as_equivalent():
+    """FQDN root-dot form ``bot.test.`` is DNS-equivalent to ``bot.test``.
+    The allowlist should treat them as the same host so a fixture that
+    happens to ship the fully-qualified form does not break the test.
+    """
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"reply": "ok"})
+
+    with _client_with_handler(handler) as client:
+        bot = http_webhook(
+            "https://bot.test./webhook",
+            client=client,
+            allowed_hosts=["bot.test"],
+        )
+        convo = Conversation(bot=bot)
+        turn = convo.say("ping")
+    assert turn.bot == "ok"
+
+    # Symmetric case: allowlist with trailing dot accepts URL without one.
+    with _client_with_handler(handler) as client:
+        bot = http_webhook(
+            "https://bot.test/webhook",
+            client=client,
+            allowed_hosts=["bot.test."],
+        )
+        convo = Conversation(bot=bot)
+        turn = convo.say("ping")
+    assert turn.bot == "ok"
+
+
+def test_allowed_hosts_blocks_ipv6_loopback_when_external_only():
+    """Same threat as IPv4 loopback, IPv6 form. urlparse strips brackets."""
+    with pytest.raises(ValueError, match=r"is not in allowed_hosts"):
+        http_webhook("http://[::1]/webhook", allowed_hosts=["bot.test"])

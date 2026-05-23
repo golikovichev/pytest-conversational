@@ -72,17 +72,30 @@ def _check_host_allowed(url: str, allowed_hosts: Optional[Iterable[str]]) -> Non
     Pass ``allowed_hosts=None`` to opt out (the default). When set, the
     check fires at adapter construction time so misconfigured tests fail
     early rather than reaching out to an unexpected endpoint at runtime.
+
+    Host comparison is case-insensitive on both sides. Trailing FQDN-root
+    dots (``bot.test.`` equivalent to ``bot.test``) are normalised away
+    before comparison. URLs without an explicit scheme raise a separate,
+    clearer error so the caller does not get a generic "host None" message.
     """
     if allowed_hosts is None:
         return
-    host = urlparse(url).hostname
-    allowed_set = {h.lower() for h in allowed_hosts}
-    if host is None or host.lower() not in allowed_set:
+    parsed = urlparse(url)
+    if not parsed.scheme:
+        raise ValueError(
+            f"webhook URL {url!r} has no scheme; expected 'http://...' or "
+            f"'https://...'. allowed_hosts is set, so the scheme is required "
+            f"to determine the host reliably."
+        )
+    host = parsed.hostname
+    normalised_host = host.rstrip(".").lower() if host else None
+    allowed_set = {h.rstrip(".").lower() for h in allowed_hosts}
+    if normalised_host is None or normalised_host not in allowed_set:
         raise ValueError(
             f"webhook URL host {host!r} is not in allowed_hosts "
             f"{sorted(allowed_set)!r}. Pin the host explicitly to prevent "
             f"accidental requests to internal addresses (127.0.0.1, "
-            f"169.254.169.254, VPC ranges) or untrusted endpoints."
+            f"169.254.169.254, ::1, VPC ranges) or untrusted endpoints."
         )
 
 
