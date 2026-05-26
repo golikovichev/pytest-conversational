@@ -37,11 +37,15 @@ Issues = "https://github.com/golikovichev/pytest-conversational/issues"
 http = [
     "httpx>=0.25",
 ]
+allure = [
+    "allure-pytest>=2.13",
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "coverage>=7.0",
     "httpx>=0.25",
+    "allure-pytest>=2.13",
 ]
 
 [project.entry-points.pytest11]

@@ -5,6 +5,19 @@ All notable changes to pytest-conversational are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Allure transcript attachments (closes #2). `allure_attach_transcript`
+  fixture serializes the Conversation as `transcript.json` (turns, state,
+  metadata) and `transcript.md` (rendered turn-by-turn), then attaches both
+  to the Allure report when the test fails. Optional `--conversational-always-attach`
+  CLI flag also attaches on passing runs. The fixture is graceful: if
+  `allure-pytest` is not installed the attach is a no-op, so the feature
+  carries no hard dependency. New `allure` extra in `pyproject.toml` pulls
+  `allure-pytest>=2.13` when users opt in.
+
 ## [0.4.0] - 2026-05-23
 
 ### Added
@@ -60,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release. `pyproject.toml`, CI matrix on Python 3.10 / 3.11 / 3.12, smoke tests.
 
 [Unreleased]: https://github.com/golikovichev/pytest-conversational/compare/v0.4.0...HEAD
+
 [0.4.0]: https://github.com/golikovichev/pytest-conversational/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/golikovichev/pytest-conversational/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/golikovichev/pytest-conversational/compare/v0.1.0...v0.2.0
