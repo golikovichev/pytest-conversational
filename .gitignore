@@ -20,3 +20,6 @@ Thumbs.db
 # IDE
 .idea/
 .vscode/
+
+# Local knowledge-graph extraction output (AST scan, not committed)
+graphify-out/
