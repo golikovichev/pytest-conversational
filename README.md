@@ -20,6 +20,8 @@ Most chat-bot test setups fall into one of two camps. Either a pile of `requests
 
 You bring the bot. The plugin keeps turn order and per-conversation state, then prints a transcript when an assertion fails.
 
+![A multi-turn test catching a bot that drops a slot on the final turn. The failure shows exactly what the bot said versus what the test expected.](docs/assets/pytest-conversational-failure.gif)
+
 ## Install
 
 ```bash
@@ -105,11 +107,13 @@ def test_replies(conversation_factory):
     convo.say("hi")
 
     expect.contains(convo.last.bot, "hello")
+    expect.not_contains(convo.last.bot, "error")
     expect.regex(convo.last.bot, r"^hello\s+\w+")
     expect.one_of(convo.last.bot, ["hello there", "hi there", "hey"])
 ```
 
 - `contains(actual, substring, *, case_sensitive=False)`: substring search. Case-insensitive by default.
+- `not_contains(actual, substring, *, case_sensitive=False)`: the negative of `contains`. Guards against leaks, for example a bot echoing an internal error, a stack trace, or a value it was never given.
 - `regex(actual, pattern, *, flags=0)`: `re.search` semantics. Returns the match object so callers can inspect captured groups.
 - `one_of(actual, options, *, case_sensitive=False, mode="exact")`: matches `actual` against a list of alternative `options`. Supports `mode="exact"` (full-string match, default) and `mode="substring"` (checks if any option is a substring of `actual`).
 
@@ -130,7 +134,7 @@ Use these when bare `assert "hello" in convo.last.bot` would give noisy failure 
 - `Conversation.last`, `.turns`, `.history`, `.transcript()`.
 - `Turn(user, bot, metadata)`.
 - `BotAdapter = Callable[[str, Conversation], str]`.
-- `expect.contains`, `expect.regex`, `expect.one_of`.
+- `expect.contains`, `expect.not_contains`, `expect.regex`, `expect.one_of`.
 
 ## Roadmap
 

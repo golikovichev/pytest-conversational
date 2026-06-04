@@ -47,6 +47,52 @@ class TestContains:
             pytest.fail("expected AssertionError")
 
 
+class TestNotContains:
+    def test_substring_absent_passes(self) -> None:
+        expect.not_contains("hello there", "goodbye")
+
+    def test_substring_absent_case_insensitive_default(self) -> None:
+        expect.not_contains("Hello there", "STACKTRACE")
+
+    def test_substring_present_raises(self) -> None:
+        with pytest.raises(AssertionError, match="expected substring 'error'"):
+            expect.not_contains("internal error: 500", "error")
+
+    def test_present_case_insensitive_default_raises(self) -> None:
+        with pytest.raises(AssertionError):
+            expect.not_contains("Traceback most recent call", "traceback")
+
+    def test_case_sensitive_mode_allows_different_case(self) -> None:
+        # In case-sensitive mode a differently-cased occurrence does not count.
+        expect.not_contains("Error", "error", case_sensitive=True)
+
+    def test_case_sensitive_mode_same_case_raises(self) -> None:
+        with pytest.raises(AssertionError):
+            expect.not_contains("error here", "error", case_sensitive=True)
+
+    def test_none_actual_raises(self) -> None:
+        with pytest.raises(AssertionError, match="got None"):
+            expect.not_contains(None, "error")  # type: ignore[arg-type]
+
+    def test_non_str_substring_raises_typeerror(self) -> None:
+        with pytest.raises(TypeError):
+            expect.not_contains("hello", 42)  # type: ignore[arg-type]
+
+    def test_empty_substring_raises(self) -> None:
+        # Empty substring is in every string, so the absence assertion fails.
+        with pytest.raises(AssertionError):
+            expect.not_contains("anything", "")
+
+    def test_failure_message_shows_actual(self) -> None:
+        try:
+            expect.not_contains("the secret is hunter2", "hunter2")
+        except AssertionError as e:
+            assert "hunter2" in str(e)
+            assert "the secret is hunter2" in str(e)
+        else:
+            pytest.fail("expected AssertionError")
+
+
 class TestRegex:
     def test_match_at_start(self) -> None:
         m = expect.regex("hello world", r"^hello")

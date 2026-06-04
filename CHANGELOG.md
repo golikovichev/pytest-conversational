@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `expect.not_contains` matcher: the negative of `contains`, asserting a
+  substring is absent from a reply. Useful for leak guards (bot must not echo
+  an internal error, a stack trace, or a value it was never given).
+  Case-insensitive by default; raises on a None reply.
 - Allure transcript attachments (closes #2). `allure_attach_transcript`
   fixture serializes the Conversation as `transcript.json` (turns, state,
   metadata) and `transcript.md` (rendered turn-by-turn), then attaches both

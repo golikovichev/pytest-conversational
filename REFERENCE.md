@@ -55,6 +55,9 @@ A bot adapter is any callable that takes user text plus the current conversation
 - `contains(actual: str, substring: str, *, case_sensitive: bool = False) -> None`
   Substring search. Case-insensitive by default. Raises if `actual` is `None` or does not contain `substring`.
 
+- `not_contains(actual: str, substring: str, *, case_sensitive: bool = False) -> None`
+  The negative of `contains`. Asserts `substring` is absent from `actual`. Case-insensitive by default. Use as a leak guard (reply must not echo an internal error, a stack trace, or a value it was never given). Raises if `actual` is `None`, if `substring` is present, or if `substring` is not a `str`.
+
 - `regex(actual: str, pattern: str, *, flags: int = 0) -> re.Match[str]`
   `re.search` semantics. Returns the match object so callers can inspect captured groups. Raises if `actual` is `None` or the pattern does not match.
 

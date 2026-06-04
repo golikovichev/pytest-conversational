@@ -49,6 +49,34 @@ def contains(actual: str, substring: str, *, case_sensitive: bool = False) -> No
         )
 
 
+def not_contains(actual: str, substring: str, *, case_sensitive: bool = False) -> None:
+    """Assert that ``substring`` does NOT appear anywhere in ``actual``.
+
+    The negative of :func:`contains`. Use it to guard against leaks: the bot
+    must not echo an internal error, a stack trace, or a value it was never
+    given (for example a raw secret or another user's data).
+
+    Case-insensitive by default. Pass ``case_sensitive=True`` for exact
+    case matching.
+
+    Raises:
+        AssertionError: if ``actual`` is None or contains ``substring``.
+        TypeError: if ``substring`` is not a str.
+    """
+    if actual is None:
+        raise AssertionError(
+            f"expected substring {substring!r} absent from reply, got None"
+        )
+    if not isinstance(substring, str):
+        raise TypeError(f"substring must be str, got {type(substring).__name__}")
+    haystack = actual if case_sensitive else actual.lower()
+    needle = substring if case_sensitive else substring.lower()
+    if needle in haystack:
+        raise AssertionError(
+            f"expected substring {substring!r} absent from reply, got: {actual!r}"
+        )
+
+
 def regex(actual: str, pattern: str, *, flags: int = 0) -> re.Match[str]:
     """Assert that ``actual`` matches the regex ``pattern`` (re.search semantics).
 
