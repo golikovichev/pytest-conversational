@@ -137,6 +137,33 @@ pip install 'pytest-conversational[http]'
 
 The base install does not require `httpx`. Importing `pytest_conversational.adapters.http_webhook` without the extra fails with a helpful `ImportError` only when the adapter is actually called.
 
+## Scenarios
+
+Load named multi-turn dialogues from a JSON or YAML file and run one pytest case per scenario, instead of copying assertions for each path.
+
+```bash
+pip install 'pytest-conversational[scenarios]'   # only needed for YAML; JSON works with the base install
+```
+
+```python
+from pytest_conversational import parametrize_scenarios
+
+@parametrize_scenarios("tests/scenarios/dialogues.yaml")
+def test_dialogue(scenario, conversation_factory):
+    convo = conversation_factory(bot=my_bot)
+    for turn in scenario.turns:
+        convo.say(turn.user)
+```
+
+File shape: a top-level list of scenarios. Each scenario has a `name` and a non-empty `turns` list, plus optional `tags` and `metadata`. Each turn has a `user` string and optional `expect`, `expect_contains`, and `metadata`.
+
+Public symbols, all importable from the package root: `load_scenarios`, `parametrize_scenarios`, `Scenario`, `ScenarioTurn`, `ScenarioLoadError`.
+
+- JSON uses the standard library, so the core package stays dependency free.
+- YAML requires the `scenarios` extra. Loading a YAML file without it raises `ImportError`, not `ScenarioLoadError`, since a missing dependency is an environment problem rather than a malformed file.
+- A missing path, an unknown suffix, a non-list top level, an empty list, or a malformed scenario or turn raises `ScenarioLoadError` with a message naming the offending scenario, turn, and field.
+- Scenario names should be unique, since they become the parametrize ids.
+
 ## Error handling reference
 
 - **Adapter raised an exception:** the exception propagates unchanged through `convo.say()`. Tests can pattern-match on the concrete type (`pytest.raises(MyAdapterError)`). The partial Turn stays in `convo.turns`.
@@ -144,6 +171,7 @@ The base install does not require `httpx`. Importing `pytest_conversational.adap
 - **Webhook body too large:** raises before JSON parse with a clear message.
 - **Webhook returned non-200:** `httpx.HTTPStatusError`.
 - **Wrong reply shape:** `KeyError` or `TypeError` if the default parser cannot find `reply`. Pass `response_parser` to handle a different shape.
+- **Scenario file invalid:** `load_scenarios` and `parametrize_scenarios` raise `ScenarioLoadError` (missing path, bad suffix, non-list top level, empty list, malformed scenario or turn). A YAML file loaded without the `scenarios` extra raises `ImportError`.
 
 ## External links
 
