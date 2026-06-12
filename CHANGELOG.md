@@ -5,10 +5,16 @@ All notable changes to pytest-conversational are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-06-12
+
+First stable release. The public API (the `conversation` fixture, the
+`expect` matchers, scenario loading, and the bot adapter protocol) is now
+considered stable and follows semantic versioning from here.
 
 ### Added
 
+- Load conversation scenarios from JSON or YAML files, so multi-turn cases can
+  live as data next to the tests instead of being hand-built in Python.
 - `expect.not_contains` matcher: the negative of `contains`, asserting a
   substring is absent from a reply. Useful for leak guards (bot must not echo
   an internal error, a stack trace, or a value it was never given).

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pytest-conversational"
-version = "0.4.0"
+version = "1.0.0"
 description = "pytest plugin for multi-turn dialogue testing with a pluggable bot adapter. Rule-based, no LLM dependency."
 readme = "README.md"
 license = "MIT"
