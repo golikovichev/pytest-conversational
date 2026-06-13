@@ -170,7 +170,16 @@ def load_scenarios(path: str | Path) -> list[Scenario]:
         )
     if not payload:
         raise ScenarioLoadError("scenario file is empty (top-level list has no items)")
-    return [_coerce_scenario(s, i) for i, s in enumerate(payload)]
+    scenarios = [_coerce_scenario(s, i) for i, s in enumerate(payload)]
+    seen: set[str] = set()
+    for scenario in scenarios:
+        if scenario.name in seen:
+            raise ScenarioLoadError(
+                f"duplicate scenario name {scenario.name!r}: names are used as "
+                f"parametrize ids and must be unique"
+            )
+        seen.add(scenario.name)
+    return scenarios
 
 
 def parametrize_scenarios(path: str | Path, *, argname: str = "scenario"):

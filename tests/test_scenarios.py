@@ -205,6 +205,24 @@ def test_top_level_not_list_in_yaml(tmp_path):
         load_scenarios(path)
 
 
+def test_duplicate_scenario_names_rejected(tmp_path):
+    # names become parametrize ids; duplicates make pytest mangle ids and break
+    # `-k name` targeting, so reject them at load time with a clear error.
+    path = tmp_path / "dup.json"
+    path.write_text(
+        json.dumps(
+            [
+                {"name": "greet", "turns": [{"user": "hi"}]},
+                {"name": "order", "turns": [{"user": "pizza"}]},
+                {"name": "greet", "turns": [{"user": "hello again"}]},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ScenarioLoadError, match="duplicate scenario name 'greet'"):
+        load_scenarios(path)
+
+
 # ----------------------------- Parametrize helper -----------------------------
 
 

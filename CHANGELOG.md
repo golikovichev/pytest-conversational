@@ -5,6 +5,17 @@ All notable changes to pytest-conversational are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `load_scenarios` now rejects a file that defines two scenarios with the same
+  `name`, raising `ScenarioLoadError` instead of loading them. Names are used as
+  pytest parametrize ids, so duplicates previously caused pytest to mangle the
+  ids silently and broke `-k name` targeting. A file that relied on duplicate
+  names (unlikely, since they were already broken) must give each scenario a
+  unique name.
+
 ## [1.0.0] - 2026-06-12
 
 First stable release. The public API (the `conversation` fixture, the
