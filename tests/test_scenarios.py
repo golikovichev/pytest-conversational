@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import textwrap
+from dataclasses import FrozenInstanceError
 
 import pytest
 
@@ -276,11 +277,11 @@ def test_parametrize_custom_argname(tmp_path, pytester):
 
 def test_scenario_is_frozen():
     s = Scenario(name="x", turns=())
-    with pytest.raises((AttributeError, Exception)):
+    with pytest.raises(FrozenInstanceError):
         s.name = "y"  # type: ignore[misc]
 
 
 def test_scenario_turn_is_frozen():
     t = ScenarioTurn(user="hi")
-    with pytest.raises((AttributeError, Exception)):
+    with pytest.raises(FrozenInstanceError):
         t.user = "bye"  # type: ignore[misc]
