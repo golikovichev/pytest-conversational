@@ -142,6 +142,10 @@ Use these when bare `assert "hello" in convo.last.bot` would give noisy failure 
 - v0.5: async adapter support for coroutine-based bots.
 - v1.0: 12.06.2026 release.
 
+## Contributing
+
+Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and the PR workflow. A couple of `good first issue` slots are open in the [issue tracker](https://github.com/golikovichev/pytest-conversational/issues) if you want to jump in.
+
 ## Licence
 
 MIT. See `LICENSE`.
