@@ -3,6 +3,7 @@
 [![CI](https://github.com/golikovichev/pytest-conversational/actions/workflows/ci.yml/badge.svg)](https://github.com/golikovichev/pytest-conversational/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/golikovichev/pytest-conversational/actions/workflows/codeql.yml/badge.svg)](https://github.com/golikovichev/pytest-conversational/actions/workflows/codeql.yml)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13010/badge)](https://www.bestpractices.dev/projects/13010)
+[![Tessl](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.tessl.io%2Fv1%2Fbadges%2Fgolikovichev%2Fpytest-conversational)](https://tessl.io/registry/golikovichev/pytest-conversational)
 [![codecov](https://codecov.io/gh/golikovichev/pytest-conversational/branch/main/graph/badge.svg)](https://codecov.io/gh/golikovichev/pytest-conversational)
 [![PyPI](https://img.shields.io/pypi/v/pytest-conversational.svg)](https://pypi.org/project/pytest-conversational/)
 [![Downloads](https://static.pepy.tech/badge/pytest-conversational/month)](https://pepy.tech/project/pytest-conversational)
