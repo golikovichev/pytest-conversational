@@ -1,10 +1,14 @@
 """Conversation and Turn models with bot adapter wiring."""
 
+import inspect
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Awaitable, Callable, Optional
 
 BotAdapter = Callable[[str, "Conversation"], str]
 """Callable that takes the user text plus the current conversation and returns the bot reply."""
+
+AsyncBotAdapter = Callable[[str, "Conversation"], Awaitable[str]]
+"""Coroutine adapter: same shape as BotAdapter but returns an awaitable reply. Drive it with ``say_async``."""
 
 
 @dataclass
@@ -66,7 +70,42 @@ class Conversation:
         turn = Turn(user=text)
         self.turns.append(turn)
         reply = self.bot(text, self)
+        if inspect.isawaitable(reply):
+            # An async adapter was passed to the synchronous path. Storing the
+            # coroutine in turn.bot would silently corrupt the transcript and
+            # leak a "coroutine was never awaited" RuntimeWarning, so refuse
+            # loudly and undo the partial turn instead.
+            if inspect.iscoroutine(reply):
+                reply.close()
+            self.turns.remove(turn)
+            raise TypeError(
+                "Bot adapter returned an awaitable. Use 'await convo.say_async(...)' "
+                "for coroutine bots; say() only drives synchronous adapters."
+            )
         turn.bot = reply
+        return turn
+
+    async def say_async(self, text: str) -> Turn:
+        """Async counterpart of ``say`` for coroutine bot adapters.
+
+        Awaits the adapter's reply and writes it back into the same Turn.
+        Turn ordering, the ``convo.history`` contract, and partial-transcript
+        semantics on failure match ``say`` exactly: a raising adapter leaves
+        the partial Turn (``turn.bot == ""``) in ``self.turns`` and propagates
+        the original exception unchanged.
+
+        Raises:
+            RuntimeError: if no adapter is attached.
+            Exception: whatever the adapter itself raises, propagated as-is.
+        """
+        if self.bot is None:
+            raise RuntimeError(
+                "Conversation has no bot adapter. "
+                "Pass bot=callable when constructing, or use add_user for user-only flows."
+            )
+        turn = Turn(user=text)
+        self.turns.append(turn)
+        turn.bot = await self.bot(text, self)
         return turn
 
     @property

@@ -7,8 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `Conversation.say_async(text)`, an async counterpart of `say` for coroutine
+  bot adapters. It awaits the adapter's reply and keeps the same turn ordering,
+  `convo.history` contract, and partial-transcript-on-failure semantics as the
+  synchronous path. The new `AsyncBotAdapter` type alias documents the shape
+  (`Callable[[str, Conversation], Awaitable[str]]`). Tests drive the coroutines
+  with `asyncio.run`, so no async plugin is added and the package keeps its
+  zero-dependency stance.
+
 ### Fixed
 
+- The synchronous `say()` now rejects an async adapter with a clear `TypeError`
+  pointing at `say_async`, instead of silently storing the un-awaited coroutine
+  in `turn.bot`. Previously an `async def` bot passed to `say()` corrupted the
+  transcript with a coroutine object and leaked a "coroutine was never awaited"
+  RuntimeWarning. The aborted turn is removed so the history stays consistent.
 - `load_scenarios` now rejects a file that defines two scenarios with the same
   `name`, raising `ScenarioLoadError` instead of loading them. Names are used as
   pytest parametrize ids, so duplicates previously caused pytest to mangle the

@@ -96,6 +96,32 @@ The default contract: POST `{"user": text, "history": [[u, b], ...]}`, expect `2
 
 The webhook URL is passed through to `httpx` as-is. If your test feeds a URL it pulled from user input, fixture data, or another untrusted source, the adapter will happily hit it. That includes internal addresses like `127.0.0.1`, `169.254.169.254` (cloud metadata service), or `10.x.x.x` inside a VPC. Pin the URL to a hard-coded value in the test, or gate it through your own allowlist before passing it in.
 
+## Async bots
+
+If your bot is a coroutine (a FastAPI handler, an aiogram dispatcher, a
+LangChain `ainvoke` wrapper), drive it with `say_async` instead of `say`:
+
+```python
+import asyncio
+from pytest_conversational import Conversation
+
+
+async def my_async_bot(text, convo):
+    reply = await call_my_model(text)
+    return reply
+
+
+def test_async_bot():
+    convo = Conversation(bot=my_async_bot)
+    asyncio.run(convo.say_async("hello"))
+    assert convo.last.bot
+```
+
+`say_async` keeps the same turn order, `history`, and partial-transcript-on-failure
+behaviour as `say`. Passing an `async def` bot to the synchronous `say()` raises a
+`TypeError` that points you here, rather than silently storing an un-awaited
+coroutine as the reply.
+
 ## Matchers
 
 `expect` is a small module of assertion helpers tuned for bot replies. Each matcher raises `AssertionError` with the actual reply embedded in the message, so pytest output shows what the bot said versus what the test wanted.
@@ -131,6 +157,7 @@ Use these when bare `assert "hello" in convo.last.bot` would give noisy failure 
 
 - `Conversation(bot=None, turns=[], state={})`
 - `Conversation.say(text)`: drive a turn through the adapter, return the Turn.
+- `Conversation.say_async(text)`: await a coroutine adapter, return the Turn.
 - `Conversation.add_user(text)`: append a user-only turn.
 - `Conversation.last`, `.turns`, `.history`, `.transcript()`.
 - `Turn(user, bot, metadata)`.
@@ -139,9 +166,9 @@ Use these when bare `assert "hello" in convo.last.bot` would give noisy failure 
 
 ## Roadmap
 
-- v0.4: scenario DSL loaded from YAML or plain text fixtures.
-- v0.5: async adapter support for coroutine-based bots.
-- v1.0: 12.06.2026 release.
+- v0.4: scenario DSL loaded from YAML or plain text fixtures. Shipped.
+- v0.5: async adapter support for coroutine-based bots (`say_async`). Shipped.
+- v1.0: 12.06.2026 release. Shipped.
 
 ## Contributing
 

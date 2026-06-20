@@ -8,7 +8,12 @@ from pytest_conversational.allure_attachments import (
     render_transcript_markdown,
     serialize_transcript_json,
 )
-from pytest_conversational.conversation import BotAdapter, Conversation, Turn
+from pytest_conversational.conversation import (
+    AsyncBotAdapter,
+    BotAdapter,
+    Conversation,
+    Turn,
+)
 from pytest_conversational.scenarios import (
     Scenario,
     ScenarioLoadError,
@@ -24,6 +29,7 @@ except PackageNotFoundError:
     __version__ = "0.0.0+unknown"
 
 __all__ = [
+    "AsyncBotAdapter",
     "BotAdapter",
     "Conversation",
     "Scenario",
