@@ -79,8 +79,10 @@ def test_render_transcript_markdown_two_turns_with_state_and_metadata() -> None:
     md = render_transcript_markdown(convo)
     assert "## Turn 1" in md
     assert "## Turn 2" in md
-    assert "**USER:** hi" in md
-    assert "**BOT:** hello" in md
+    # content is now wrapped in tilde fences: label on its own line, value inside
+    assert "**USER:**" in md and "hi" in md
+    assert "**BOT:**" in md and "hello" in md
+    assert "~~~text" in md
     assert "intent" in md and "greet" in md
     assert "## State" in md
     assert "session_id" in md
@@ -90,7 +92,7 @@ def test_render_transcript_markdown_incomplete_turn_marker() -> None:
     convo = Conversation()
     convo.add_user("orphan")  # bot reply intentionally missing
     md = render_transcript_markdown(convo)
-    assert "**USER:** orphan" in md
+    assert "**USER:**" in md and "orphan" in md
     assert "turn incomplete" in md
 
 
@@ -143,6 +145,130 @@ def test_attach_to_allure_returns_true_with_fake_module(
     assert types == {"json", "markdown"}
 
 
+# --- #13 hardening: length caps and Markdown injection guard ---
+
+
+def test_markdown_caps_turns_at_limit() -> None:
+    from pytest_conversational.allure_attachments import MAX_TURNS_PER_ATTACHMENT
+
+    convo = Conversation()
+    over = MAX_TURNS_PER_ATTACHMENT + 100
+    for i in range(over):
+        t = convo.add_user(f"u{i}")
+        t.bot = f"b{i}"
+    md = render_transcript_markdown(convo)
+    # capped: the turn just past the limit is not rendered
+    assert f"## Turn {MAX_TURNS_PER_ATTACHMENT + 1}" not in md
+    # truncation marker present with the original count
+    assert f"[truncated, original turns: {over}]" in md
+
+
+def test_json_caps_turns_at_limit() -> None:
+    from pytest_conversational.allure_attachments import MAX_TURNS_PER_ATTACHMENT
+
+    convo = Conversation()
+    over = MAX_TURNS_PER_ATTACHMENT + 50
+    for i in range(over):
+        convo.add_user(f"u{i}")
+    payload = json.loads(serialize_transcript_json(convo))
+    assert len(payload["turns"]) == MAX_TURNS_PER_ATTACHMENT
+    assert payload["truncated_turns"] == over
+
+
+def test_zero_max_turns_means_unlimited() -> None:
+    convo = Conversation()
+    for i in range(5):
+        convo.add_user(f"u{i}")
+    md = render_transcript_markdown(convo, max_turns=0)
+    assert "## Turn 5" in md
+    assert "truncated, original turns" not in md
+    payload = json.loads(serialize_transcript_json(convo, max_turns=0))
+    assert len(payload["turns"]) == 5
+    assert "truncated_turns" not in payload
+
+
+def test_markdown_caps_field_chars() -> None:
+    from pytest_conversational.allure_attachments import MAX_CHARS_PER_FIELD
+
+    convo = Conversation()
+    big = "x" * (MAX_CHARS_PER_FIELD + 5000)
+    t = convo.add_user(big)
+    t.bot = "ok"
+    md = render_transcript_markdown(convo)
+    assert f"[truncated, original chars: {len(big)}]" in md
+    # the full oversized field is not present verbatim
+    assert big not in md
+    # exactly MAX_CHARS_PER_FIELD chars kept, not fewer
+    assert "x" * MAX_CHARS_PER_FIELD in md
+    assert "x" * (MAX_CHARS_PER_FIELD + 1) not in md
+
+
+def test_json_caps_metadata_field_chars() -> None:
+    from pytest_conversational.allure_attachments import MAX_CHARS_PER_FIELD
+
+    convo = Conversation()
+    big = "y" * (MAX_CHARS_PER_FIELD + 100)
+    t = convo.add_user("u")
+    t.metadata["note"] = big
+    payload = json.loads(serialize_transcript_json(convo))
+    note = payload["turns"][0]["metadata"]["note"]
+    assert big not in note
+    assert "[truncated, original chars:" in note
+
+
+def test_json_keeps_non_string_metadata_raw() -> None:
+    convo = Conversation()
+    t = convo.add_user("u")
+    t.metadata["count"] = 3
+    t.metadata["ok"] = True
+    payload = json.loads(serialize_transcript_json(convo))
+    meta = payload["turns"][0]["metadata"]
+    assert meta == {"count": 3, "ok": True}
+
+
+def test_markdown_injection_user_content_fenced() -> None:
+    convo = Conversation()
+    t1 = convo.add_user("```\n# pwned heading\n<script>alert(1)</script>")
+    t1.bot = "safe"
+    convo.add_user("second")
+    md = render_transcript_markdown(convo)
+    # the payload sits right after a tilde fence open, so the renderer shows
+    # it as text instead of executing the heading / backticks / HTML
+    assert "~~~text\n```\n# pwned heading\n<script>alert(1)</script>" in md
+    # subsequent turn structure survives the injection attempt
+    assert "## Turn 2" in md
+
+
+def test_attach_to_allure_passes_caps_through(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, str] = {}
+
+    def _attach(content: str, name: str, attachment_type: str) -> None:
+        captured[name] = content
+
+    fake = SimpleNamespace(
+        attach=_attach,
+        attachment_type=SimpleNamespace(JSON="json", MARKDOWN="markdown"),
+    )
+    monkeypatch.setitem(sys.modules, "allure", fake)
+    convo = Conversation()
+    for i in range(5):
+        convo.add_user(f"u{i}")
+    attach_to_allure(convo, max_turns=2)
+    assert "[truncated, original turns: 5]" in captured["conversation.md"]
+    assert "truncated_turns" in captured["conversation.json"]
+
+
+def test_markdown_fence_escapes_nested_tilde_fence() -> None:
+    convo = Conversation()
+    t = convo.add_user("~~~text\nbreakout\n~~~")
+    t.bot = "ok"
+    md = render_transcript_markdown(convo)
+    # outer fence must be longer than any tilde run in the content
+    assert "~~~~" in md
+
+
 # --- Fixture-level integration tests using pytester ---
 
 
@@ -169,7 +295,7 @@ def test_fixture_no_attach_on_passing_test(pytester: pytest.Pytester) -> None:
 
         @pytest.fixture(autouse=True)
         def _track_attach(monkeypatch):
-            def fake_attach(conv, label="conversation"):
+            def fake_attach(conv, label="conversation", **kwargs):
                 attach_calls.append((conv, label))
                 return True
             monkeypatch.setattr(allure_attachments, "attach_to_allure", fake_attach)
@@ -212,7 +338,7 @@ def test_fixture_attaches_on_failure(pytester: pytest.Pytester) -> None:
 
         @pytest.fixture(autouse=True)
         def _track_attach(monkeypatch):
-            def fake_attach(conv, label="conversation"):
+            def fake_attach(conv, label="conversation", **kwargs):
                 attach_calls.append((conv, label))
                 return True
             monkeypatch.setattr(allure_attachments, "attach_to_allure", fake_attach)
@@ -255,7 +381,7 @@ def test_fixture_attaches_on_always_attach_flag(pytester: pytest.Pytester) -> No
 
         @pytest.fixture(autouse=True)
         def _track_attach(monkeypatch):
-            def fake_attach(conv, label="conversation"):
+            def fake_attach(conv, label="conversation", **kwargs):
                 attach_calls.append((conv, label))
                 return True
             monkeypatch.setattr(allure_attachments, "attach_to_allure", fake_attach)
@@ -301,7 +427,7 @@ def test_fixture_explicit_register_call(pytester: pytest.Pytester) -> None:
 
         @pytest.fixture(autouse=True)
         def _track_attach(monkeypatch):
-            def fake_attach(conv, label="conversation"):
+            def fake_attach(conv, label="conversation", **kwargs):
                 attach_calls.append((conv, label))
                 return True
             monkeypatch.setattr(allure_attachments, "attach_to_allure", fake_attach)
@@ -318,3 +444,49 @@ def test_fixture_explicit_register_call(pytester: pytest.Pytester) -> None:
     result.assert_outcomes(passed=1)
     labels = (pytester.path / "attach_labels.txt").read_text().strip()
     assert labels == "alpha,beta"
+
+
+def test_pytest_ini_caps_passed_to_attach(pytester: pytest.Pytester) -> None:
+    """conversational_max_turns / conversational_max_chars in pytest.ini are
+    read by the plugin and threaded into attach_to_allure as ints."""
+    pytester.makeini(
+        """
+        [pytest]
+        conversational_max_turns = 2
+        conversational_max_chars = 50
+        """
+    )
+    pytester.makepyfile(
+        test_ini="""
+        def test_fails(conversation, allure_attach_transcript):
+            conversation.add_user("boom")
+            assert False, "intentional"
+        """
+    )
+    pytester.makeconftest(
+        """
+        import pytest
+        from pytest_conversational import allure_attachments
+
+        captured = {}
+
+        @pytest.fixture(autouse=True)
+        def _track_attach(monkeypatch):
+            def fake_attach(conv, label="conversation", max_turns=None, max_chars=None):
+                captured["max_turns"] = max_turns
+                captured["max_chars"] = max_chars
+                return True
+            monkeypatch.setattr(allure_attachments, "attach_to_allure", fake_attach)
+            import pytest_conversational.plugin as plugin
+            monkeypatch.setattr(plugin, "attach_to_allure", fake_attach)
+            yield
+
+        def pytest_sessionfinish(session, exitstatus):
+            with open(str(session.config.rootpath / "caps.txt"), "w") as f:
+                f.write(f"{captured.get('max_turns')},{captured.get('max_chars')}")
+        """
+    )
+    result = pytester.runpytest("-q")
+    result.assert_outcomes(failed=1)
+    caps = (pytester.path / "caps.txt").read_text().strip()
+    assert caps == "2,50"

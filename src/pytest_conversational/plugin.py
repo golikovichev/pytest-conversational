@@ -4,7 +4,11 @@ from typing import Callable, Optional
 
 import pytest
 
-from pytest_conversational.allure_attachments import attach_to_allure
+from pytest_conversational.allure_attachments import (
+    MAX_CHARS_PER_FIELD,
+    MAX_TURNS_PER_ATTACHMENT,
+    attach_to_allure,
+)
 from pytest_conversational.conversation import BotAdapter, Conversation
 
 
@@ -40,6 +44,16 @@ def pytest_addoption(parser: pytest.Parser) -> None:
             "Attach Conversation transcripts to Allure on success as well as "
             "failure. By default the plugin only attaches when a test fails."
         ),
+    )
+    parser.addini(
+        "conversational_max_turns",
+        help="Max conversation turns per Allure attachment before truncation.",
+        default=str(MAX_TURNS_PER_ATTACHMENT),
+    )
+    parser.addini(
+        "conversational_max_chars",
+        help="Max characters per transcript field before truncation.",
+        default=str(MAX_CHARS_PER_FIELD),
     )
 
 
@@ -151,5 +165,17 @@ def allure_attach_transcript(request: pytest.FixtureRequest) -> Callable[..., No
                 registered.append((value, name))
                 seen_ids.add(id(value))
 
+    def _ini_int(name: str, fallback: int) -> int:
+        raw = request.config.getini(name)
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return fallback
+
+    max_turns = _ini_int("conversational_max_turns", MAX_TURNS_PER_ATTACHMENT)
+    max_chars = _ini_int("conversational_max_chars", MAX_CHARS_PER_FIELD)
+
     for conversation, label in registered:
-        attach_to_allure(conversation, label=label)
+        attach_to_allure(
+            conversation, label=label, max_turns=max_turns, max_chars=max_chars
+        )
