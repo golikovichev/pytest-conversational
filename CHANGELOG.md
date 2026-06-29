@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `@pytest.mark.conversational(data="cases.yaml")` generates one test per
+  scenario in a YAML or JSON file (issue #1). The marker reads the file through
+  the existing `load_scenarios` loader and parametrizes the test's `scenario`
+  argument (one row per case, id = scenario `name`, visible in
+  `--collect-only`). A case may name fixtures to override under a `fixtures:`
+  block, resolved per case through the new `scenario_fixtures` fixture, so a
+  different bot adapter can be used per locale. A bare
+  `@pytest.mark.conversational` (no `data=`) stays a plain tag. YAML still loads
+  only through the optional `[scenarios]` extra, so the core stays
+  zero-dependency, and a malformed file fails collection with a clear
+  `ScenarioLoadError` message rather than a stack trace.
 - `Conversation.say_async(text)`, an async counterpart of `say` for coroutine
   bot adapters. It awaits the adapter's reply and keeps the same turn ordering,
   `convo.history` contract, and partial-transcript-on-failure semantics as the

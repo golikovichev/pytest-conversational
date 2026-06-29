@@ -54,6 +54,7 @@ class Scenario:
     name: str
     turns: tuple[ScenarioTurn, ...]
     tags: tuple[str, ...] = ()
+    fixtures: dict[str, str] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -115,7 +116,21 @@ def _coerce_scenario(raw: Any, index: int) -> Scenario:
     metadata = raw.get("metadata") or {}
     if not isinstance(metadata, dict):
         raise ScenarioLoadError(f"scenario {name!r}: 'metadata' must be a mapping")
-    return Scenario(name=name, turns=turns, tags=tuple(tags_raw), metadata=metadata)
+    fixtures_raw = raw.get("fixtures") or {}
+    if not isinstance(fixtures_raw, dict) or not all(
+        isinstance(k, str) and isinstance(v, str) for k, v in fixtures_raw.items()
+    ):
+        raise ScenarioLoadError(
+            f"scenario {name!r}: 'fixtures' must be a mapping of fixture role to "
+            f"fixture name (strings), e.g. {{'bot': 'russian_bot'}}"
+        )
+    return Scenario(
+        name=name,
+        turns=turns,
+        tags=tuple(tags_raw),
+        fixtures=dict(fixtures_raw),
+        metadata=metadata,
+    )
 
 
 def _parse_json(text: str) -> Any:
