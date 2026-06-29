@@ -1,5 +1,6 @@
 """pytest plugin entry. Provides the ``conversation`` fixture and a builder."""
 
+import warnings
 from typing import Callable, Optional
 
 import pytest
@@ -10,6 +11,7 @@ from pytest_conversational.allure_attachments import (
     attach_to_allure,
 )
 from pytest_conversational.conversation import BotAdapter, Conversation
+from pytest_conversational.scenarios import load_scenarios
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -25,8 +27,84 @@ def pytest_configure(config: pytest.Config) -> None:
     """
     config.addinivalue_line(
         "markers",
-        "conversational: tag a test as a multi-turn conversational bot test",
+        "conversational: tag a test as a multi-turn conversational bot test. "
+        "Pass data='path.json|yaml' to generate one test per scenario in the file.",
     )
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    """Generate one test per scenario for ``@pytest.mark.conversational(data=...)``.
+
+    The marker doubles as a parametrize source: with ``data=`` pointing at a
+    ``.json``/``.yaml`` scenario file, this loads the scenarios and parametrizes
+    the test's ``scenario`` argument (one row per case, id = scenario name). A
+    bare ``@pytest.mark.conversational`` (no ``data=``) stays a plain tag.
+
+    ``argname`` overrides the parametrized name when ``scenario`` collides with
+    an existing fixture. Parametrization is indirect so the ``scenario`` fixture
+    (and ``scenario_fixtures``) can read the active case. A malformed file raises
+    ``ScenarioLoadError`` here, surfacing as a clear collection error rather than
+    a stack trace deep in the test body.
+    """
+    marker = metafunc.definition.get_closest_marker("conversational")
+    if marker is None:
+        return
+    data = marker.kwargs.get("data")
+    if data is None:
+        return
+    argname = marker.kwargs.get("argname", "scenario")
+    if argname not in metafunc.fixturenames:
+        warnings.warn(
+            f"@pytest.mark.conversational(data={data!r}) is set but the test "
+            f"{metafunc.function.__name__!r} takes no {argname!r} argument, so no "
+            f"scenarios were generated. Add {argname!r} to the test signature, or "
+            f"pass argname= to match an existing parameter.",
+            stacklevel=2,
+        )
+        return
+    scenarios = load_scenarios(data)
+    metafunc.parametrize(
+        argname,
+        scenarios,
+        ids=[s.name for s in scenarios],
+        indirect=True,
+    )
+
+
+@pytest.fixture
+def scenario(request: pytest.FixtureRequest):
+    """The scenario for the current ``@pytest.mark.conversational(data=...)`` row.
+
+    Populated by ``pytest_generate_tests`` via indirect parametrization, so it
+    only resolves inside a marker-parametrized test. The test walks
+    ``scenario.turns`` itself: the file is data, the test keeps the behaviour.
+    """
+    if not hasattr(request, "param"):
+        raise pytest.UsageError(
+            "the 'scenario' fixture only resolves inside a test marked "
+            "@pytest.mark.conversational(data='...'); add the marker, or use "
+            "parametrize_scenarios(...) for the decorator-style API."
+        )
+    return request.param
+
+
+@pytest.fixture
+def scenario_fixtures(request: pytest.FixtureRequest, scenario) -> dict:
+    """Resolve the per-case fixture overrides declared in ``scenario.fixtures``.
+
+    Each ``{role: fixture_name}`` entry becomes ``{role: <live fixture value>}``,
+    so a case can swap, say, the bot adapter per locale::
+
+        # cases.yaml: - name: ru, fixtures: {bot: russian_bot}, turns: [...]
+        def test_flow(scenario, scenario_fixtures, conversation_factory):
+            convo = conversation_factory(bot=scenario_fixtures["bot"])
+
+    A scenario with no overrides yields an empty mapping.
+    """
+    return {
+        role: request.getfixturevalue(name)
+        for role, name in scenario.fixtures.items()
+    }
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

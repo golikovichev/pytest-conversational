@@ -70,6 +70,47 @@ def test_two_slot_flow(conversation_factory):
     assert convo.last.bot == "hello Mikhail from Hove"
 ```
 
+## Data-driven scenarios
+
+Repetitive dialogues - the same shape with different inputs (greetings per language, slot variants, fallback phrasings) - load from a YAML or JSON file and run as one test per case. Mark the test with `data=` and take a `scenario` argument:
+
+```python
+import pytest
+from pytest_conversational import expect
+
+@pytest.mark.conversational(data="tests/data/order_status.yaml")
+def test_order_status(scenario, scenario_fixtures, conversation_factory):
+    convo = conversation_factory(bot=scenario_fixtures["bot"])
+    for turn in scenario.turns:
+        convo.say(turn.user)
+        if turn.expect_contains:
+            expect.contains(convo.last.bot, turn.expect_contains)
+```
+
+```yaml
+# tests/data/order_status.yaml
+- name: english_path
+  fixtures: { bot: english_bot }     # a fixture per case (e.g. a locale bot)
+  turns:
+    - user: "where is my order?"
+      expect_contains: "order number"
+- name: russian_path
+  fixtures: { bot: russian_bot }
+  turns:
+    - user: "gde moy zakaz?"
+      expect_contains: "nomer zakaza"
+```
+
+Each case becomes its own test, with the scenario `name` as the pytest id (visible in `pytest --collect-only`). The file is data, not behaviour: the test keeps control of the assertions, and a case's `fixtures` overrides resolve to live fixtures through `scenario_fixtures`. A malformed file (missing `name`/`turns`, a non-mapping `fixtures`) fails collection with a clear message rather than a stack trace.
+
+JSON works out of the box; YAML needs the optional extra:
+
+```bash
+pip install pytest-conversational[scenarios]
+```
+
+The decorator form `@parametrize_scenarios("cases.yaml")` is also available for tests that prefer a parametrize-style API over the marker.
+
 ## HTTP webhook adapter
 
 If your bot lives behind an HTTP endpoint, use the bundled adapter instead of writing one by hand:
