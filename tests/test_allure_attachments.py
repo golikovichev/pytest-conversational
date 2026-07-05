@@ -305,7 +305,7 @@ def test_fixture_no_attach_on_passing_test(pytester: pytest.Pytester) -> None:
             yield
 
         def pytest_sessionfinish(session, exitstatus):
-            # write count к a file pytester can read back
+            # write count to a file pytester can read back
             with open(str(session.config.rootpath / "attach_count.txt"), "w") as f:
                 f.write(str(len(attach_calls)))
         """
@@ -317,7 +317,7 @@ def test_fixture_no_attach_on_passing_test(pytester: pytest.Pytester) -> None:
 
 
 def test_fixture_attaches_on_failure(pytester: pytest.Pytester) -> None:
-    """On test failure the fixture finalizer должен walk fixtures and call
+    """On test failure the fixture finalizer should walk fixtures and call
     attach_to_allure for each Conversation it finds."""
     pytester.makepyfile(
         test_fail="""

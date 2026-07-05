@@ -13,7 +13,7 @@
 
 A pytest plugin for testing chat bots, voice assistants, IVR menus. Rule-based assertions, no LLM dependency.
 
-Status: alpha. v1.0.0 target June 2026.
+Status: v1.0.0, released June 2026.
 
 ## Why
 
@@ -184,6 +184,13 @@ def test_replies(conversation_factory):
 - `not_contains(actual, substring, *, case_sensitive=False)`: the negative of `contains`. Guards against leaks, for example a bot echoing an internal error, a stack trace, or a value it was never given.
 - `regex(actual, pattern, *, flags=0)`: `re.search` semantics. Returns the match object so callers can inspect captured groups.
 - `one_of(actual, options, *, case_sensitive=False, mode="exact")`: matches `actual` against a list of alternative `options`. Supports `mode="exact"` (full-string match, default) and `mode="substring"` (checks if any option is a substring of `actual`).
+
+The next four matchers inspect metadata your adapter records rather than the reply text. They check what the adapter wrote; they do not classify, extract, or time anything themselves.
+
+- `has_intent(turn, intent_name)`: asserts `turn.metadata["intent"]` equals `intent_name`.
+- `has_slot(turn, slot_name, value=...)`: asserts `slot_name` is present in `turn.metadata["slots"]`. Pass `value=` to also assert the stored value.
+- `has_state(convo, state_name, value=...)`: asserts `state_name` is present in `convo.state`, the conversation-wide dict that persists across turns. Pass `value=` for equality.
+- `responds_within(turn, seconds)`: asserts `turn.metadata["latency_ms"]` is within the `seconds` budget (converted to milliseconds).
 
 Use these when bare `assert "hello" in convo.last.bot` would give noisy failure messages across many tests. For one-off checks, plain `assert` is still fine.
 
