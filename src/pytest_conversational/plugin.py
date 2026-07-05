@@ -102,8 +102,7 @@ def scenario_fixtures(request: pytest.FixtureRequest, scenario) -> dict:
     A scenario with no overrides yields an empty mapping.
     """
     return {
-        role: request.getfixturevalue(name)
-        for role, name in scenario.fixtures.items()
+        role: request.getfixturevalue(name) for role, name in scenario.fixtures.items()
     }
 
 
