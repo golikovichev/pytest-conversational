@@ -6,6 +6,7 @@
 [![Tessl](https://img.shields.io/endpoint?url=https%3A%2F%2Fapi.tessl.io%2Fv1%2Fbadges%2Fgolikovichev%2Fpytest-conversational)](https://tessl.io/registry/golikovichev/pytest-conversational)
 [![codecov](https://codecov.io/gh/golikovichev/pytest-conversational/branch/main/graph/badge.svg)](https://codecov.io/gh/golikovichev/pytest-conversational)
 [![PyPI](https://img.shields.io/pypi/v/pytest-conversational.svg)](https://pypi.org/project/pytest-conversational/)
+[![Downloads](https://static.pepy.tech/badge/pytest-conversational)](https://pepy.tech/project/pytest-conversational)
 [![Downloads](https://static.pepy.tech/badge/pytest-conversational/month)](https://pepy.tech/project/pytest-conversational)
 [![Python versions](https://img.shields.io/pypi/pyversions/pytest-conversational.svg)](https://pypi.org/project/pytest-conversational/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
