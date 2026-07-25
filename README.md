@@ -13,7 +13,7 @@
 
 A pytest plugin for testing chat bots, voice assistants, IVR menus. Rule-based assertions, no LLM dependency.
 
-Status: v1.0.0, released June 2026.
+Status: v1.1.0, released July 2026.
 
 ## Why
 
