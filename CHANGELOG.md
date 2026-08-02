@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `expect.said_in_order(convo, phrases, *, case_sensitive=False)`, a matcher
+  that reads the whole conversation instead of a single reply. It asserts the
+  bot's replies contain `phrases` in order across turns: each phrase must be
+  found at or after where the previous match ended, so matches are
+  non-overlapping. It targets wizard-style flows where the order of prompts is
+  the contract (ask name, then destination, then confirm) without pinning each
+  prompt to a fixed turn index. Substring match, case-insensitive by default;
+  an empty phrase list or empty phrase string raises `ValueError`, a non-str
+  phrase raises `TypeError`,
+  and a missing or out-of-order phrase raises `AssertionError` naming the phrase
+  and showing the bot replies. No new dependencies.
+
 ## [1.1.0] - 2026-07-25
 
 ### Added

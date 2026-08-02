@@ -178,6 +178,9 @@ def test_replies(conversation_factory):
     expect.not_contains(convo.last.bot, "error")
     expect.regex(convo.last.bot, r"^hello\s+\w+")
     expect.one_of(convo.last.bot, ["hello there", "hi there", "hey"])
+
+    convo.say("to Brighton")
+    expect.said_in_order(convo, ["your name", "where to", "confirmed"])
 ```
 
 - `contains(actual, substring, *, case_sensitive=False)`: substring search. Case-insensitive by default.
@@ -191,6 +194,10 @@ The next four matchers inspect metadata your adapter records rather than the rep
 - `has_slot(turn, slot_name, value=...)`: asserts `slot_name` is present in `turn.metadata["slots"]`. Pass `value=` to also assert the stored value.
 - `has_state(convo, state_name, value=...)`: asserts `state_name` is present in `convo.state`, the conversation-wide dict that persists across turns. Pass `value=` for equality.
 - `responds_within(turn, seconds)`: asserts `turn.metadata["latency_ms"]` is within the `seconds` budget (converted to milliseconds).
+
+`said_in_order` reads the whole conversation instead of a single reply:
+
+- `said_in_order(convo, phrases, *, case_sensitive=False)`: asserts the bot's replies contain `phrases` in order across turns. Each phrase must appear at or after where the previous match ended, so matches are non-overlapping and two phrases share a reply only when the later one starts after the earlier one ends. Use it for wizard-style flows where the order of prompts is the contract, without pinning each prompt to a fixed turn index. Substring match, case-insensitive by default.
 
 Use these when bare `assert "hello" in convo.last.bot` would give noisy failure messages across many tests. For one-off checks, plain `assert` is still fine.
 

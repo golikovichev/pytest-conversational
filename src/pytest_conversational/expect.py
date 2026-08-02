@@ -8,6 +8,7 @@ Usage::
     expect.contains(convo.last.bot, "hello")
     expect.regex(convo.last.bot, r"^hello\\s")
     expect.one_of(convo.last.bot, ["hi", "hey", "hello"])
+    expect.said_in_order(convo, ["your name", "where to", "confirmed"])
 
 Each matcher raises AssertionError with the actual bot reply embedded in
 the message, so pytest output shows what the bot said versus what was
@@ -253,3 +254,74 @@ def responds_within(turn: Any, seconds: float) -> None:
         raise AssertionError(
             f"expected latency <= {seconds}s ({budget_ms:.0f}ms), got {latency}ms"
         )
+
+
+def said_in_order(
+    convo: Any,
+    phrases: Iterable[str],
+    *,
+    case_sensitive: bool = False,
+) -> None:
+    """Assert the bot's replies contain ``phrases`` in order across turns.
+
+    Reads the bot side of each turn in ``convo.turns`` from first to last and
+    checks that every phrase appears as an ordered subsequence: each phrase is
+    found at or after where the previous match ended. Matches are
+    non-overlapping, so two phrases may share a reply only when the later one
+    starts after the earlier one ends. Use it for wizard-style flows where the
+    order of prompts is the
+    contract, for example the bot must ask for the name, then the destination,
+    then confirm, without pinning each prompt to a fixed turn index.
+
+    Substring match, case-insensitive by default. Pass ``case_sensitive=True``
+    for exact case matching.
+
+    Raises:
+        AssertionError: if ``convo`` is None, has no turns, or a phrase is not
+            found at or after the previous match (the offending phrase and the
+            bot replies are shown).
+        ValueError: if ``phrases`` is empty.
+        TypeError: if any phrase is not a str.
+    """
+    wanted = list(phrases)
+    if not wanted:
+        raise ValueError("said_in_order requires at least one phrase")
+    for phrase in wanted:
+        if not isinstance(phrase, str):
+            raise TypeError(f"phrase must be str, got {type(phrase).__name__}")
+        if not phrase:
+            raise ValueError("said_in_order phrases must be non-empty strings")
+    if convo is None:
+        raise AssertionError(
+            f"expected phrases {wanted!r} in order, got None conversation"
+        )
+
+    replies = [turn.bot for turn in convo.turns]
+    if not replies:
+        raise AssertionError(
+            f"expected phrases {wanted!r} in order, conversation has no turns"
+        )
+
+    # A partial/failed turn can leave turn.bot unset; treat a non-str reply as
+    # empty for matching so it contributes no match instead of crashing.
+    texts = [reply if isinstance(reply, str) else "" for reply in replies]
+    haystacks = texts if case_sensitive else [text.lower() for text in texts]
+
+    cursor_turn = 0
+    cursor_pos = 0
+    for phrase in wanted:
+        needle = phrase if case_sensitive else phrase.lower()
+        found = False
+        for index in range(cursor_turn, len(haystacks)):
+            start = cursor_pos if index == cursor_turn else 0
+            position = haystacks[index].find(needle, start)
+            if position != -1:
+                cursor_turn = index
+                cursor_pos = position + len(needle)
+                found = True
+                break
+        if not found:
+            raise AssertionError(
+                f"expected phrase {phrase!r} at or after the previous match, "
+                f"but it was not found in order. Bot replies: {replies!r}"
+            )
