@@ -221,9 +221,23 @@ Use these when bare `assert "hello" in convo.last.bot` would give noisy failure 
 
 ## Roadmap
 
-- v0.4: scenario DSL loaded from YAML or plain text fixtures. Shipped.
-- v0.5: async adapter support for coroutine-based bots (`say_async`). Shipped.
-- v1.0: 12.06.2026 release. Shipped.
+Full shipped history lives in [CHANGELOG.md](CHANGELOG.md). Recent milestones:
+
+- v1.1 (2026-07-25): data-driven scenarios via `@pytest.mark.conversational(data="cases.yaml")` with per-case fixture overrides, and `say_async` for coroutine bot adapters.
+- v1.0 (2026-06-12): first stable release. Scenario loading from JSON or YAML, `not_contains` matcher, Allure transcript attachments.
+- v0.4 (2026-05-23): `slot`, `state`, `intent`, and `latency` matchers, plus HTTP webhook adapter hardening (`allowed_hosts`, reply size guard).
+
+On main, not yet in a release:
+
+- `said_in_order` matcher: assert the bot's replies contain a set of phrases in order across turns, for wizard-style flows where prompt order is the contract.
+
+### Where it goes next
+
+Direction, not a schedule. What gets built first depends on what real users report.
+
+- Adapters for real bot stacks: an HTTP webhook adapter ships today. A Telegram adapter and a voice or IVR surrogate (Twilio-shaped) would remove the glue a team writes by hand before the first test.
+- Transcript diff on failure: the transcript already prints when an assert fails; next is marking the exact mismatch inside it and saving the run as an HTML artifact, so a red test reads as a diagnosis.
+- Composable intent and slot helpers: the `intent` and `slot` matchers cover the primitives; a few helpers on top would fold in the checks people still write by hand.
 
 ## Contributing
 
